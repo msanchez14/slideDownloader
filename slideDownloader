@@ -1,0 +1,54 @@
+#!/bin/bash
+
+dir=$(pwd)
+num=1
+
+if [ -z $1 ]
+
+  then
+    echo "Usage 'slideDownloader es.slideshare.net/xxxxxxx/xxxxx [name]'"
+  
+  else
+    if [ -d /tmp/slidetemp ]
+       then
+           rm -R /tmp/slidetemp
+    fi
+
+    mkdir /tmp/slidetemp
+    cd /tmp/slidetemp
+    echo "Looking for slides..."    
+    wget -q $1 #Descarga la página web para localizar las imagenes
+
+    mkdir images
+    cd images
+
+    totalSlides=$(cat ../$(ls -F .. | grep -v '/$') | grep -Po 'data-full=".*?"' | grep -Po '".*?"' | wc -l)
+    # El comando <cat ../$(ls -F .. | grep -v '/$') | grep -Po 'data-full=".*?"' | grep -Po '".*?"' | tr '"' ' '> devuelve las imagenes a descargar
+    for i in $(cat ../$(ls -F .. | grep -v '/$') | grep -Po 'data-full=".*?"' | grep -Po '".*?"' | tr '"' ' ')
+    do
+	curl -s $i > $num.jpg
+	echo -ne "Downloading $num of $totalSlides... \033[0K\r"
+
+	while [ $(wc -c <$num.jpg) -lt 10 ] #Si no ha podido descargarlo reintenta la operación
+	  
+          do
+	      curl -s $i > $num.jpg
+	  done
+	
+        let num=$num+1
+
+    done
+
+    echo ""
+    echo "Converting to pdf..."
+
+    if [ -z $2 ]
+    then
+        convert $(ls -1 | sort -n)  $dir/$(ls -F .. | grep -v '/$').pdf
+    else
+        convert $(ls -1 | sort -n)  $dir/$2.pdf
+    fi
+  
+    cd $dir
+    rm -R /tmp/slidetemp
+fi
